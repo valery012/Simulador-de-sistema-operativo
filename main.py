@@ -1,6 +1,7 @@
 
 import sys
 
+from interfaz.planificador_ui import PlanificadorUI
 from simulador.procesos import GestorProcesos
 from PySide6.QtCore import Qt, QDateTime, QTimer
 from PySide6.QtGui import QBrush, QColor
