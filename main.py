@@ -1,16 +1,24 @@
 
 import sys
 
-from interfaz.planificador_ui import PlanificadorUI
-from simulador.procesos import GestorProcesos
-from PySide6.QtCore import Qt, QDateTime, QTimer
+from PySide6.QtCore import QDateTime, QTimer
 from PySide6.QtGui import QBrush, QColor
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QFrame,
-    QLabel, QPushButton, QVBoxLayout,
-    QHBoxLayout, QMdiArea, QMenu
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QFrame,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QHBoxLayout,
+    QMdiArea,
+    QMenu,
 )
+
+from simulador.procesos import GestorProcesos
 from interfaz.procesos_ui import ProcesosUI
+from interfaz.planificador_ui import PlanificadorUI
 
 
 class PyOS(QMainWindow):
@@ -21,14 +29,16 @@ class PyOS(QMainWindow):
         "Concurrencia": "Hilos y sincronización con Lock.",
         "Comunicación": "Cola de mensajes entre procesos.",
         "Memoria": "Asignar y liberar memoria simulada.",
-        "Archivos": "Crear, leer, modificar y eliminar archivos."
+        "Archivos": "Crear, leer, modificar y eliminar archivos.",
     }
 
     def __init__(self):
         super().__init__()
 
-
+        # Gestor compartido entre Procesos y Planificador CPU
         self.gestor_procesos = GestorProcesos()
+
+        # Configuración de la ventana principal
         self.setWindowTitle("PyOS Simulator")
         self.resize(1100, 700)
         self.setMinimumSize(850, 550)
@@ -46,7 +56,6 @@ class PyOS(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Barra superior
         encabezado = QFrame()
         encabezado.setObjectName("encabezado")
 
@@ -60,12 +69,10 @@ class PyOS(QMainWindow):
 
         layout.addWidget(encabezado)
 
-        # Área principal
         contenido = QHBoxLayout()
         contenido.setContentsMargins(0, 0, 0, 0)
         contenido.setSpacing(0)
 
-        # Menú lateral
         lateral = QFrame()
         lateral.setObjectName("lateral")
         lateral.setFixedWidth(190)
@@ -77,6 +84,7 @@ class PyOS(QMainWindow):
         menu_lateral.addWidget(etiqueta)
 
         for nombre in self.MODULOS:
+
             boton = QPushButton(nombre)
             boton.setObjectName("botonModulo")
 
@@ -90,8 +98,9 @@ class PyOS(QMainWindow):
         menu_lateral.addStretch()
         contenido.addWidget(lateral)
 
-        # Escritorio con ventanas internas
+
         self.escritorio = QMdiArea()
+
         self.escritorio.setBackground(
             QBrush(QColor("#152842"))
         )
@@ -99,7 +108,7 @@ class PyOS(QMainWindow):
         contenido.addWidget(self.escritorio)
         layout.addLayout(contenido)
 
-        # Barra de tareas inferior
+
         barra_tareas = QFrame()
         barra_tareas.setObjectName("barraTareas")
 
@@ -111,7 +120,9 @@ class PyOS(QMainWindow):
         menu_inicio = QMenu(self)
 
         for nombre in self.MODULOS:
+
             accion = menu_inicio.addAction(nombre)
+
             accion.triggered.connect(
                 lambda checked=False, n=nombre:
                 self.abrir_modulo(n)
@@ -122,23 +133,29 @@ class PyOS(QMainWindow):
 
         tareas.addStretch()
 
+        # Reloj del sistema
         self.reloj = QLabel()
         self.reloj.setObjectName("reloj")
+
         tareas.addWidget(self.reloj)
 
         layout.addWidget(barra_tareas)
 
-        # Actualizar reloj
+        # Actualización automática del reloj
         self.actualizar_reloj()
 
-        temporizador = QTimer(self)
-        temporizador.timeout.connect(
+        self.temporizador = QTimer(self)
+
+        self.temporizador.timeout.connect(
             self.actualizar_reloj
         )
-        temporizador.start(1000)
+
+        self.temporizador.start(1000)
 
     def actualizar_reloj(self):
+
         hora = QDateTime.currentDateTime()
+
         self.reloj.setText(
             hora.toString("hh:mm:ss")
         )
@@ -147,49 +164,87 @@ class PyOS(QMainWindow):
 
         # Evitar abrir dos veces la misma ventana
         for ventana in self.escritorio.subWindowList():
+
             if ventana.windowTitle() == nombre:
+
                 ventana.showNormal()
+
                 self.escritorio.setActiveSubWindow(
                     ventana
                 )
+
                 return
-
-        # El modulo de procesos ya tiene su panel funcional.
         if nombre == "Procesos":
-            panel = ProcesosUI(self.gestor_procesos)
-        else:
-            panel = QWidget()
 
+            panel = ProcesosUI(
+                self.gestor_procesos
+            )
+
+        elif nombre == "Planificador CPU":
+
+            panel = PlanificadorUI(
+                self.gestor_procesos
+            )
+
+        else:
+
+            panel = QWidget()
             panel.setObjectName("panel")
 
-            layout = QVBoxLayout(panel)
-            layout.setContentsMargins(25, 25, 25, 25)
+            panel_layout = QVBoxLayout(panel)
+
+            panel_layout.setContentsMargins(
+                25, 25, 25, 25
+            )
 
             titulo = QLabel(nombre)
             titulo.setObjectName("tituloModulo")
 
-            descripcion = QLabel(self.MODULOS[nombre])
+            descripcion = QLabel(
+                self.MODULOS[nombre]
+            )
+
             descripcion.setWordWrap(True)
 
             estado = QLabel(
                 "Módulo pendiente de implementación"
             )
+
             estado.setObjectName("estado")
 
-            layout.addWidget(titulo)
-            layout.addWidget(descripcion)
-            layout.addSpacing(20)
-            layout.addWidget(estado)
-            layout.addStretch()
+            panel_layout.addWidget(titulo)
+            panel_layout.addWidget(descripcion)
+            panel_layout.addSpacing(20)
+            panel_layout.addWidget(estado)
+            panel_layout.addStretch()
 
-        # Crear ventana interna
-        ventana = self.escritorio.addSubWindow(panel)
+        ventana = self.escritorio.addSubWindow(
+            panel
+        )
+
         ventana.setWindowTitle(nombre)
-        ventana.resize(850 if nombre == "Procesos" else 520, 
-                       560 if nombre == "Procesos" else 320)
+
+        # Tamaños según el módulo
+        if nombre in (
+            "Procesos",
+            "Planificador CPU"
+        ):
+
+            ventana.resize(850, 560)
+
+        else:
+
+            ventana.resize(520, 320)
+
         ventana.show()
 
-        self.escritorio.setActiveSubWindow(ventana)
+        self.escritorio.setActiveSubWindow(
+            ventana
+        )
+
+    # ------------------------------------
+    # ESTILOS DE PYOS
+    # ------------------------------------
 
     def aplicar_estilos(self):
 
@@ -270,8 +325,8 @@ class PyOS(QMainWindow):
             }
         """)
 
-
 if __name__ == "__main__":
+
     app = QApplication(sys.argv)
 
     ventana = PyOS()
