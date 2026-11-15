@@ -16,9 +16,11 @@ from PySide6.QtWidgets import (
     QMenu,
 )
 
+# Modulos de PyOS
 from simulador.procesos import GestorProcesos
 from interfaz.procesos_ui import ProcesosUI
 from interfaz.planificador_ui import PlanificadorUI
+from interfaz.concurrencia_ui import ConcurrenciaUI
 
 
 class PyOS(QMainWindow):
@@ -35,10 +37,10 @@ class PyOS(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # Gestor compartido entre Procesos y Planificador CPU
+        # Gestor compartido entre los modulos
         self.gestor_procesos = GestorProcesos()
 
-        # Configuración de la ventana principal
+        # Ventana principal
         self.setWindowTitle("PyOS Simulator")
         self.resize(1100, 700)
         self.setMinimumSize(850, 550)
@@ -48,7 +50,6 @@ class PyOS(QMainWindow):
 
     def crear_escritorio(self):
 
-        # Contenedor principal
         principal = QWidget()
         self.setCentralWidget(principal)
 
@@ -73,6 +74,8 @@ class PyOS(QMainWindow):
         contenido.setContentsMargins(0, 0, 0, 0)
         contenido.setSpacing(0)
 
+        
+
         lateral = QFrame()
         lateral.setObjectName("lateral")
         lateral.setFixedWidth(190)
@@ -81,6 +84,7 @@ class PyOS(QMainWindow):
 
         etiqueta = QLabel("APLICACIONES")
         etiqueta.setObjectName("seccion")
+
         menu_lateral.addWidget(etiqueta)
 
         for nombre in self.MODULOS:
@@ -98,6 +102,7 @@ class PyOS(QMainWindow):
         menu_lateral.addStretch()
         contenido.addWidget(lateral)
 
+       
 
         self.escritorio = QMdiArea()
 
@@ -106,6 +111,7 @@ class PyOS(QMainWindow):
         )
 
         contenido.addWidget(self.escritorio)
+
         layout.addLayout(contenido)
 
 
@@ -133,7 +139,7 @@ class PyOS(QMainWindow):
 
         tareas.addStretch()
 
-        # Reloj del sistema
+     
         self.reloj = QLabel()
         self.reloj.setObjectName("reloj")
 
@@ -141,7 +147,6 @@ class PyOS(QMainWindow):
 
         layout.addWidget(barra_tareas)
 
-        # Actualización automática del reloj
         self.actualizar_reloj()
 
         self.temporizador = QTimer(self)
@@ -162,7 +167,7 @@ class PyOS(QMainWindow):
 
     def abrir_modulo(self, nombre):
 
-        # Evitar abrir dos veces la misma ventana
+        # Evitar duplicar ventanas
         for ventana in self.escritorio.subWindowList():
 
             if ventana.windowTitle() == nombre:
@@ -174,17 +179,24 @@ class PyOS(QMainWindow):
                 )
 
                 return
+
         if nombre == "Procesos":
 
             panel = ProcesosUI(
                 self.gestor_procesos
             )
 
+
         elif nombre == "Planificador CPU":
 
             panel = PlanificadorUI(
                 self.gestor_procesos
             )
+
+
+        elif nombre == "Concurrencia":
+
+            panel = ConcurrenciaUI()
 
         else:
 
@@ -218,16 +230,18 @@ class PyOS(QMainWindow):
             panel_layout.addWidget(estado)
             panel_layout.addStretch()
 
+
         ventana = self.escritorio.addSubWindow(
             panel
         )
 
         ventana.setWindowTitle(nombre)
 
-        # Tamaños según el módulo
+        # Tamaño de ventanas por modulo
         if nombre in (
             "Procesos",
-            "Planificador CPU"
+            "Planificador CPU",
+            "Concurrencia"
         ):
 
             ventana.resize(850, 560)
@@ -242,9 +256,6 @@ class PyOS(QMainWindow):
             ventana
         )
 
-    # ------------------------------------
-    # ESTILOS DE PYOS
-    # ------------------------------------
 
     def aplicar_estilos(self):
 
@@ -324,6 +335,7 @@ class PyOS(QMainWindow):
                 font-weight: bold;
             }
         """)
+
 
 if __name__ == "__main__":
 
