@@ -1,5 +1,5 @@
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QWidget,
@@ -15,15 +15,22 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QHeaderView,
     QAbstractItemView,
+    QMessageBox,
 )
+
+from simulador.procesos import EstadoProceso
 
 
 class ProcesosUI(QWidget):
 
-    def __init__(self, gestor_procesos):
+    # Avisa al escritorio cuando cambia un proceso.
+    procesos_cambiados = Signal()
+
+    def __init__(self, gestor_procesos, gestor_memoria=None):
         super().__init__()
 
         self.gestor = gestor_procesos
+        self.gestor_memoria = gestor_memoria
 
         self.setObjectName("vistaProcesos")
         self.setWindowTitle("Procesos")
@@ -33,6 +40,9 @@ class ProcesosUI(QWidget):
         self.aplicar_estilos()
         self.actualizar_tabla()
 
+    # =====================================
+    # INTERFAZ
+    # =====================================
 
     def crear_interfaz(self):
 
@@ -40,7 +50,7 @@ class ProcesosUI(QWidget):
         principal.setContentsMargins(18, 17, 18, 15)
         principal.setSpacing(13)
 
-
+        # ENCABEZADO
         encabezado = QHBoxLayout()
         encabezado.setSpacing(12)
 
@@ -48,8 +58,6 @@ class ProcesosUI(QWidget):
         icono.setObjectName("iconoModulo")
         icono.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icono.setFixedSize(48, 48)
-
-        encabezado.addWidget(icono)
 
         textos = QVBoxLayout()
         textos.setSpacing(4)
@@ -66,12 +74,12 @@ class ProcesosUI(QWidget):
 
         textos.addWidget(titulo)
         textos.addWidget(descripcion)
-
+        encabezado.addWidget(icono)
         encabezado.addLayout(textos, 1)
 
         principal.addLayout(encabezado)
 
-
+        # FORMULARIO
         panel = QFrame()
         panel.setObjectName("panelFormulario")
 
@@ -79,71 +87,54 @@ class ProcesosUI(QWidget):
         formulario.setContentsMargins(16, 14, 16, 14)
         formulario.setHorizontalSpacing(17)
         formulario.setVerticalSpacing(8)
-
         formulario.setColumnStretch(0, 1)
         formulario.setColumnStretch(1, 1)
 
         self.nombre = QLineEdit()
-        self.nombre.setPlaceholderText(
-            "Ej. Editor de texto"
-        )
+        self.nombre.setPlaceholderText("Ej. Editor de texto")
 
         self.llegada = self.crear_campo_numerico(
-            minimo=0,
-            maximo=9999,
-            valor=0
+            0, 9999, 0
         )
 
         self.cpu = self.crear_campo_numerico(
-            minimo=1,
-            maximo=9999,
-            valor=5
+            1, 9999, 5
         )
 
         self.prioridad = self.crear_campo_numerico(
-            minimo=0,
-            maximo=9999,
-            valor=1
+            0, 9999, 1
         )
 
         self.memoria = self.crear_campo_numerico(
-            minimo=1,
-            maximo=65536,
-            valor=128
+            1, 65536, 128
         )
         self.memoria.setSuffix(" MB")
 
         formulario.addWidget(
-            self.crear_etiqueta("Nombre del proceso"),
-            0, 0
+            self.crear_etiqueta("Nombre del proceso"), 0, 0
         )
         formulario.addWidget(
-            self.crear_etiqueta("Tiempo de llegada"),
-            0, 1
+            self.crear_etiqueta("Tiempo de llegada"), 0, 1
         )
 
         formulario.addWidget(self.nombre, 1, 0)
         formulario.addWidget(self.llegada, 1, 1)
 
         formulario.addWidget(
-            self.crear_etiqueta("CPU requerida"),
-            2, 0
+            self.crear_etiqueta("CPU requerida"), 2, 0
         )
         formulario.addWidget(
-            self.crear_etiqueta("Prioridad"),
-            2, 1
+            self.crear_etiqueta("Prioridad"), 2, 1
         )
 
         formulario.addWidget(self.cpu, 3, 0)
         formulario.addWidget(self.prioridad, 3, 1)
 
         formulario.addWidget(
-            self.crear_etiqueta("Memoria solicitada"),
-            4, 0
+            self.crear_etiqueta("Memoria solicitada"), 4, 0
         )
         formulario.addWidget(
-            self.crear_etiqueta("Estado inicial"),
-            4, 1
+            self.crear_etiqueta("Estado inicial"), 4, 1
         )
 
         formulario.addWidget(self.memoria, 5, 0)
@@ -154,19 +145,13 @@ class ProcesosUI(QWidget):
             Qt.AlignmentFlag.AlignVCenter
             | Qt.AlignmentFlag.AlignLeft
         )
-
         formulario.addWidget(estado_inicial, 5, 1)
 
-        # Botones
         acciones = QHBoxLayout()
         acciones.setSpacing(10)
 
-        self.boton_crear = QPushButton(
-            "＋  Crear proceso"
-        )
-        self.boton_crear.setObjectName(
-            "botonPrincipal"
-        )
+        self.boton_crear = QPushButton("＋  Crear proceso")
+        self.boton_crear.setObjectName("botonPrincipal")
 
         self.boton_finalizar = QPushButton(
             "Finalizar seleccionado"
@@ -175,12 +160,13 @@ class ProcesosUI(QWidget):
             "botonSecundario"
         )
 
-        self.boton_crear.setCursor(
-            Qt.CursorShape.PointingHandCursor
-        )
-        self.boton_finalizar.setCursor(
-            Qt.CursorShape.PointingHandCursor
-        )
+        for boton in (
+            self.boton_crear,
+            self.boton_finalizar,
+        ):
+            boton.setCursor(
+                Qt.CursorShape.PointingHandCursor
+            )
 
         self.boton_crear.clicked.connect(
             self.crear_proceso
@@ -199,22 +185,16 @@ class ProcesosUI(QWidget):
 
         principal.addWidget(panel)
 
-
+        # CABECERA DE LA TABLA
         cabecera_tabla = QHBoxLayout()
 
         titulo_tabla = QLabel(
             "Procesos del sistema"
         )
-        titulo_tabla.setObjectName(
-            "tituloSeccion"
-        )
+        titulo_tabla.setObjectName("tituloSeccion")
 
-        self.contador = QLabel(
-            "0 procesos"
-        )
-        self.contador.setObjectName(
-            "contadorProcesos"
-        )
+        self.contador = QLabel("0 procesos")
+        self.contador.setObjectName("contadorProcesos")
 
         cabecera_tabla.addWidget(titulo_tabla)
         cabecera_tabla.addStretch()
@@ -222,12 +202,9 @@ class ProcesosUI(QWidget):
 
         principal.addLayout(cabecera_tabla)
 
-
+        # TABLA
         self.tabla = QTableWidget(0, 7)
-
-        self.tabla.setObjectName(
-            "tablaProcesos"
-        )
+        self.tabla.setObjectName("tablaProcesos")
 
         self.tabla.setHorizontalHeaderLabels([
             "PID",
@@ -252,48 +229,34 @@ class ProcesosUI(QWidget):
         )
 
         self.tabla.setAlternatingRowColors(True)
-
-        self.tabla.verticalHeader().setVisible(
-            False
-        )
-
-        self.tabla.verticalHeader().setDefaultSectionSize(
-            36
-        )
+        self.tabla.verticalHeader().setVisible(False)
+        self.tabla.verticalHeader().setDefaultSectionSize(36)
 
         self.tabla.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Stretch
         )
 
-        self.tabla.horizontalHeader().setMinimumSectionSize(
-            60
-        )
-
+        self.tabla.horizontalHeader().setMinimumSectionSize(60)
         self.tabla.setShowGrid(False)
 
-        principal.addWidget(
-            self.tabla, 1
-        )
+        principal.addWidget(self.tabla, 1)
 
-
+        # MENSAJE INFERIOR
         self.mensaje = QLabel(
             "Sistema listo para gestionar procesos."
         )
-
-        self.mensaje.setObjectName(
-            "mensajeEstado"
-        )
-
+        self.mensaje.setObjectName("mensajeEstado")
         self.mensaje.setWordWrap(True)
 
         principal.addWidget(self.mensaje)
 
+    # =====================================
+    # AUXILIARES
+    # =====================================
 
     def crear_etiqueta(self, texto):
         etiqueta = QLabel(texto)
-        etiqueta.setObjectName(
-            "etiquetaCampo"
-        )
+        etiqueta.setObjectName("etiquetaCampo")
         return etiqueta
 
     def crear_campo_numerico(
@@ -305,7 +268,6 @@ class ProcesosUI(QWidget):
         return campo
 
     def informar(self, texto, tipo="normal"):
-
         colores = {
             "normal": "#AFC2DA",
             "exito": "#4ADE80",
@@ -313,15 +275,27 @@ class ProcesosUI(QWidget):
             "error": "#FB7185",
         }
 
-        color = colores.get(
-            tipo, colores["normal"]
-        )
-
         self.mensaje.setText(texto)
         self.mensaje.setStyleSheet(
-            f"color: {color};"
+            f"color: {colores.get(tipo, colores['normal'])};"
         )
 
+    def buscar_proceso(self, pid):
+        for proceso in self.gestor.consultar():
+            if proceso.pid == pid:
+                return proceso
+        return None
+
+    def memoria_asignada(self, pid):
+        if self.gestor_memoria is None:
+            return 0
+
+        asignaciones = self.gestor_memoria.consultar()
+        return asignaciones.get(pid, 0)
+
+    # =====================================
+    # CREAR PROCESO
+    # =====================================
 
     def crear_proceso(self):
 
@@ -346,23 +320,21 @@ class ProcesosUI(QWidget):
             self.actualizar_tabla()
             self.nombre.clear()
 
-            pid = getattr(
-                proceso, "pid", None
-            )
+            pid = getattr(proceso, "pid", None)
 
             if pid is not None:
-                mensaje = (
+                texto = (
                     f"Proceso P{pid} creado correctamente."
                 )
             else:
-                mensaje = (
+                texto = (
                     f"Proceso '{nombre}' creado correctamente."
                 )
 
-            self.informar(
-                mensaje,
-                "exito"
-            )
+            self.informar(texto, "exito")
+
+            # Actualizar Memoria, Comunicación y dashboard.
+            self.procesos_cambiados.emit()
 
         except (ValueError, RuntimeError) as error:
             self.informar(
@@ -370,6 +342,9 @@ class ProcesosUI(QWidget):
                 "error"
             )
 
+    # =====================================
+    # FINALIZAR PROCESO
+    # =====================================
 
     def finalizar_proceso(self):
 
@@ -382,43 +357,139 @@ class ProcesosUI(QWidget):
             )
             return
 
-        elemento = self.tabla.item(
-            fila, 0
-        )
+        elemento = self.tabla.item(fila, 0)
 
         if elemento is None:
             return
 
-        pid = int(
-            elemento.text()
-        )
+        pid = int(elemento.text())
+        proceso = self.buscar_proceso(pid)
 
+        if proceso is None:
+            self.informar(
+                "El proceso seleccionado ya no existe.",
+                "error"
+            )
+            self.actualizar_tabla()
+            return
+
+        # Evitar finalizar dos veces el mismo proceso.
+        if proceso.estado == EstadoProceso.FINALIZADO:
+            self.informar(
+                f"El proceso P{pid} ya está finalizado.",
+                "advertencia"
+            )
+            return
+
+        cantidad_memoria = self.memoria_asignada(pid)
+
+        # Mostrar confirmación solo si hay RAM asignada.
+        if cantidad_memoria > 0:
+
+            dialogo = QMessageBox(self)
+            dialogo.setWindowTitle(
+                "Finalizar proceso y liberar memoria"
+            )
+
+            dialogo.setIcon(
+                QMessageBox.Icon.Question
+            )
+
+            dialogo.setText(
+                f"El proceso P{pid} tiene "
+                f"{cantidad_memoria} MB asignados."
+            )
+
+            dialogo.setInformativeText(
+                "¿Deseas finalizar el proceso y "
+                "liberar su memoria simulada?"
+            )
+
+            dialogo.setStandardButtons(
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+            )
+
+            dialogo.setDefaultButton(
+                QMessageBox.StandardButton.No
+            )
+
+            dialogo.button(
+                QMessageBox.StandardButton.Yes
+            ).setText("Finalizar y liberar")
+
+            dialogo.button(
+                QMessageBox.StandardButton.No
+            ).setText("Cancelar")
+
+            respuesta = dialogo.exec()
+
+            if respuesta != QMessageBox.StandardButton.Yes:
+                self.informar(
+                    "Operación cancelada. "
+                    "El proceso y su memoria no cambiaron."
+                )
+                return
+
+        # Primero cambiar el estado del proceso.
         try:
             self.gestor.finalizar(pid)
-
-            self.actualizar_tabla()
-
-            self.informar(
-                f"Proceso P{pid} finalizado. "
-                "Si tiene memoria asignada, "
-                "puedes liberarla desde Memoria.",
-                "exito"
-            )
 
         except (ValueError, RuntimeError) as error:
             self.informar(
                 f"No se pudo finalizar el proceso: {error}",
                 "error"
             )
+            return
 
+        # Después liberar la RAM, cuando corresponde.
+        memoria_liberada = 0
+        error_memoria = None
+
+        if cantidad_memoria > 0:
+            try:
+                self.gestor_memoria.liberar(pid)
+                memoria_liberada = cantidad_memoria
+
+            except (ValueError, RuntimeError) as error:
+                error_memoria = str(error)
+
+        self.actualizar_tabla()
+
+        # Avisar al resto de módulos aunque haya habido
+        # un problema al liberar memoria.
+        self.procesos_cambiados.emit()
+
+        if error_memoria is not None:
+            self.informar(
+                f"P{pid} quedó finalizado, pero no se "
+                f"pudo liberar su RAM: {error_memoria}. "
+                "Revísala en Memoria.",
+                "error"
+            )
+
+        elif memoria_liberada > 0:
+            self.informar(
+                f"Proceso P{pid} finalizado y "
+                f"{memoria_liberada} MB liberados.",
+                "exito"
+            )
+
+        else:
+            self.informar(
+                f"Proceso P{pid} finalizado. "
+                "No tenía memoria asignada.",
+                "exito"
+            )
+
+    # =====================================
+    # ACTUALIZAR TABLA
+    # =====================================
 
     def actualizar_tabla(self):
 
         procesos = self.gestor.consultar()
-
-        self.tabla.setRowCount(
-            len(procesos)
-        )
+        self.tabla.setRowCount(len(procesos))
 
         for fila, proceso in enumerate(procesos):
 
@@ -428,9 +499,7 @@ class ProcesosUI(QWidget):
                 str(proceso.estado)
             )
 
-            estado = estado.replace(
-                "_", " "
-            ).title()
+            estado = estado.replace("_", " ").title()
 
             valores = [
                 str(proceso.pid),
@@ -444,9 +513,7 @@ class ProcesosUI(QWidget):
 
             for columna, valor in enumerate(valores):
 
-                item = QTableWidgetItem(
-                    valor
-                )
+                item = QTableWidgetItem(valor)
 
                 if columna != 1:
                     item.setTextAlignment(
@@ -471,9 +538,7 @@ class ProcesosUI(QWidget):
                         )
 
                 self.tabla.setItem(
-                    fila,
-                    columna,
-                    item
+                    fila, columna, item
                 )
 
         cantidad = len(procesos)
@@ -482,6 +547,10 @@ class ProcesosUI(QWidget):
             f"{cantidad} "
             f"{'proceso' if cantidad == 1 else 'procesos'}"
         )
+
+    # =====================================
+    # ESTILOS MIDNIGHT TECH
+    # =====================================
 
     def aplicar_estilos(self):
 
@@ -607,7 +676,7 @@ class ProcesosUI(QWidget):
                 outline: none;
                 gridline-color: #24364F;
                 selection-background-color: #25477E;
-                selection-color: white;
+                selection-color: #FFFFFF;
             }
 
             QTableWidget#tablaProcesos::item {
