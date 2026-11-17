@@ -1,4 +1,3 @@
-
 import sys
 
 from PySide6.QtCore import QDateTime, QTimer
@@ -16,11 +15,15 @@ from PySide6.QtWidgets import (
     QMenu,
 )
 
-# Modulos de PyOS
 from simulador.procesos import GestorProcesos
+from simulador.comunicacion import ColaMensajes
+from simulador.memoria import GestorMemoria
+
 from interfaz.procesos_ui import ProcesosUI
 from interfaz.planificador_ui import PlanificadorUI
 from interfaz.concurrencia_ui import ConcurrenciaUI
+from interfaz.comunicacion_ui import ComunicacionUI
+from interfaz.memoria_ui import MemoriaUI
 
 
 class PyOS(QMainWindow):
@@ -37,10 +40,12 @@ class PyOS(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # Gestor compartido entre los modulos
+        # Gestores compartidos por los modulos
         self.gestor_procesos = GestorProcesos()
+        self.cola_mensajes = ColaMensajes()
+        self.gestor_memoria = GestorMemoria(1024)
 
-        # Ventana principal
+        # Ventana principal de PyOS
         self.setWindowTitle("PyOS Simulator")
         self.resize(1100, 700)
         self.setMinimumSize(850, 550)
@@ -70,11 +75,11 @@ class PyOS(QMainWindow):
 
         layout.addWidget(encabezado)
 
+
         contenido = QHBoxLayout()
         contenido.setContentsMargins(0, 0, 0, 0)
         contenido.setSpacing(0)
 
-        
 
         lateral = QFrame()
         lateral.setObjectName("lateral")
@@ -100,9 +105,9 @@ class PyOS(QMainWindow):
             menu_lateral.addWidget(boton)
 
         menu_lateral.addStretch()
+
         contenido.addWidget(lateral)
 
-       
 
         self.escritorio = QMdiArea()
 
@@ -114,12 +119,12 @@ class PyOS(QMainWindow):
 
         layout.addLayout(contenido)
 
-
         barra_tareas = QFrame()
         barra_tareas.setObjectName("barraTareas")
 
         tareas = QHBoxLayout(barra_tareas)
 
+        # Boton de inicio
         boton_inicio = QPushButton("Inicio")
         boton_inicio.setObjectName("inicio")
 
@@ -135,11 +140,11 @@ class PyOS(QMainWindow):
             )
 
         boton_inicio.setMenu(menu_inicio)
-        tareas.addWidget(boton_inicio)
 
+        tareas.addWidget(boton_inicio)
         tareas.addStretch()
 
-     
+
         self.reloj = QLabel()
         self.reloj.setObjectName("reloj")
 
@@ -165,9 +170,10 @@ class PyOS(QMainWindow):
             hora.toString("hh:mm:ss")
         )
 
+
     def abrir_modulo(self, nombre):
 
-        # Evitar duplicar ventanas
+        # Evitar abrir dos veces la misma ventana
         for ventana in self.escritorio.subWindowList():
 
             if ventana.windowTitle() == nombre:
@@ -187,6 +193,7 @@ class PyOS(QMainWindow):
             )
 
 
+
         elif nombre == "Planificador CPU":
 
             panel = PlanificadorUI(
@@ -197,6 +204,21 @@ class PyOS(QMainWindow):
         elif nombre == "Concurrencia":
 
             panel = ConcurrenciaUI()
+
+
+
+        elif nombre == "Comunicación":
+
+            panel = ComunicacionUI(
+                self.cola_mensajes
+            )
+
+        elif nombre == "Memoria":
+
+            panel = MemoriaUI(
+                self.gestor_memoria,
+                self.gestor_procesos
+            )
 
         else:
 
@@ -230,18 +252,19 @@ class PyOS(QMainWindow):
             panel_layout.addWidget(estado)
             panel_layout.addStretch()
 
-
         ventana = self.escritorio.addSubWindow(
             panel
         )
 
         ventana.setWindowTitle(nombre)
 
-        # Tamaño de ventanas por modulo
+        # Tamaño de las ventanas
         if nombre in (
             "Procesos",
             "Planificador CPU",
-            "Concurrencia"
+            "Concurrencia",
+            "Comunicación",
+            "Memoria"
         ):
 
             ventana.resize(850, 560)
@@ -255,7 +278,6 @@ class PyOS(QMainWindow):
         self.escritorio.setActiveSubWindow(
             ventana
         )
-
 
     def aplicar_estilos(self):
 
@@ -335,7 +357,6 @@ class PyOS(QMainWindow):
                 font-weight: bold;
             }
         """)
-
 
 if __name__ == "__main__":
 
