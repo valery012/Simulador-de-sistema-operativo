@@ -21,9 +21,6 @@ from PySide6.QtWidgets import (
     QProgressBar,
 )
 
-# ============================================
-# GESTORES DEL SIMULADOR
-# ============================================
 
 from simulador.procesos import (
     GestorProcesos,
@@ -33,9 +30,6 @@ from simulador.comunicacion import ColaMensajes
 from simulador.memoria import GestorMemoria
 from simulador.archivos import GestorArchivos
 
-# ============================================
-# INTERFACES DE LOS MODULOS
-# ============================================
 
 from interfaz.procesos_ui import ProcesosUI
 from interfaz.planificador_ui import PlanificadorUI
@@ -78,9 +72,6 @@ class PyOS(QMainWindow):
         "Archivos": "▤",
     }
 
-    # ========================================
-    # INICIALIZACION
-    # ========================================
 
     def __init__(self):
         super().__init__()
@@ -113,9 +104,7 @@ class PyOS(QMainWindow):
 
         self.temporizador.start(1000)
 
-    # ========================================
-    # ESCRITORIO PRINCIPAL
-    # ========================================
+   
 
     def crear_escritorio(self):
 
@@ -126,9 +115,6 @@ class PyOS(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # ====================================
-        # ENCABEZADO SUPERIOR
-        # ====================================
 
         encabezado = QFrame()
         encabezado.setObjectName("encabezado")
@@ -174,10 +160,7 @@ class PyOS(QMainWindow):
 
         layout.addWidget(encabezado)
 
-        # ====================================
-        # CUERPO CENTRAL
-        # ====================================
-
+    
         cuerpo = QHBoxLayout()
         cuerpo.setContentsMargins(0, 0, 0, 0)
         cuerpo.setSpacing(0)
@@ -234,9 +217,6 @@ class PyOS(QMainWindow):
 
         cuerpo.addWidget(lateral)
 
-        # ====================================
-        # VISTAS CENTRALES
-        # ====================================
 
         self.vistas = QStackedWidget()
         self.vistas.setObjectName("vistas")
@@ -275,9 +255,6 @@ class PyOS(QMainWindow):
 
         layout.addLayout(cuerpo, 1)
 
-        # ====================================
-        # BARRA INFERIOR
-        # ====================================
 
         barra_inferior = QFrame()
         barra_inferior.setObjectName("barraInferior")
@@ -345,9 +322,6 @@ class PyOS(QMainWindow):
 
         layout.addWidget(barra_inferior)
 
-    # ========================================
-    # MENU LATERAL
-    # ========================================
 
     def agregar_boton(
         self, layout, nombre, funcion
@@ -393,10 +367,6 @@ class PyOS(QMainWindow):
             boton.setChecked(
                 modulo == nombre
             )
-
-    # ========================================
-    # DASHBOARD
-    # ========================================
 
     def crear_dashboard(self):
 
@@ -451,9 +421,7 @@ class PyOS(QMainWindow):
 
         layout.addWidget(descripcion)
 
-        # ====================================
-        # TARJETAS DE ESTADISTICAS
-        # ====================================
+
 
         tarjetas = QGridLayout()
         tarjetas.setSpacing(13)
@@ -507,10 +475,6 @@ class PyOS(QMainWindow):
         )
 
         layout.addLayout(tarjetas)
-
-        # ====================================
-        # RESUMEN DE MEMORIA
-        # ====================================
 
         panel_memoria = QFrame()
         panel_memoria.setObjectName(
@@ -567,10 +531,6 @@ class PyOS(QMainWindow):
         layout.addWidget(
             panel_memoria
         )
-
-        # ====================================
-        # ACCESOS RAPIDOS
-        # ====================================
 
         acciones = QHBoxLayout()
         acciones.setSpacing(12)
@@ -633,9 +593,6 @@ class PyOS(QMainWindow):
 
         return area
 
-    # ========================================
-    # CREAR TARJETA
-    # ========================================
 
     def crear_tarjeta(self, nombre, icono):
 
@@ -686,9 +643,6 @@ class PyOS(QMainWindow):
 
         return tarjeta, valor, detalle
 
-    # ========================================
-    # INDICADORES DINAMICOS
-    # ========================================
 
     def actualizar_indicadores(self):
 
@@ -788,9 +742,6 @@ class PyOS(QMainWindow):
             ahora.toString("hh:mm:ss")
         )
 
-    # ========================================
-    # PANTALLA DE INICIO
-    # ========================================
 
     def mostrar_inicio(self):
 
@@ -804,9 +755,6 @@ class PyOS(QMainWindow):
 
         self.actualizar_indicadores()
 
-    # ========================================
-    # ACTIVACION DE VENTANAS
-    # ========================================
 
     def ventana_activada(self, ventana):
 
@@ -817,9 +765,6 @@ class PyOS(QMainWindow):
             if nombre in self.MODULOS:
                 self.marcar_activo(nombre)
 
-    # ========================================
-    # AJUSTAR TAMANO Y POSICION
-    # ========================================
 
     def centrar_ventana(self, ventana):
 
@@ -891,9 +836,6 @@ class PyOS(QMainWindow):
         ):
             self.centrar_ventana(ventana)
 
-    # ========================================
-    # ABRIR MODULOS
-    # ========================================
 
     def abrir_modulo(self, nombre):
 
@@ -903,9 +845,6 @@ class PyOS(QMainWindow):
 
         self.marcar_activo(nombre)
 
-        # ====================================
-        # REUTILIZAR VENTANA EXISTENTE
-        # ====================================
 
         for ventana in self.escritorio.subWindowList():
 
@@ -927,9 +866,6 @@ class PyOS(QMainWindow):
 
                 return
 
-        # ====================================
-        # CONSTRUIR MODULO SOLICITADO
-        # ====================================
 
         if nombre == "Procesos":
 
@@ -972,9 +908,6 @@ class PyOS(QMainWindow):
         else:
             return
 
-        # ====================================
-        # AGREGAR VENTANA INTERNA
-        # ====================================
 
         ventana = self.escritorio.addSubWindow(
             panel
@@ -1004,10 +937,6 @@ class PyOS(QMainWindow):
         ventana.raise_()
 
         self.actualizar_indicadores()
-
-    # ========================================
-    # ESTILOS MIDNIGHT TECH
-    # ========================================
 
     def aplicar_estilos(self):
 
@@ -1315,11 +1244,6 @@ class PyOS(QMainWindow):
                 width: 0px;
             }
         """)
-
-
-# ============================================
-# EJECUTAR EL PROGRAMA
-# ============================================
 
 if __name__ == "__main__":
 
