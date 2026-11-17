@@ -18,21 +18,21 @@ from PySide6.QtWidgets import (
 from simulador.procesos import GestorProcesos
 from simulador.comunicacion import ColaMensajes
 from simulador.memoria import GestorMemoria
-
+from simulador.archivos import GestorArchivos
 from interfaz.procesos_ui import ProcesosUI
 from interfaz.planificador_ui import PlanificadorUI
 from interfaz.concurrencia_ui import ConcurrenciaUI
 from interfaz.comunicacion_ui import ComunicacionUI
 from interfaz.memoria_ui import MemoriaUI
-
+from interfaz.archivos_ui import ArchivosUI
 
 class PyOS(QMainWindow):
 
     MODULOS = {
         "Procesos": "Crear, consultar y finalizar procesos.",
-        "Planificador CPU": "FCFS, SJF, Round Robin y estadísticas.",
+        "Planificador CPU": "FCFS, SJF y Round Robin.",
         "Concurrencia": "Hilos y sincronización con Lock.",
-        "Comunicación": "Cola de mensajes entre procesos.",
+        "Comunicación": "Mensajes mediante cola FIFO.",
         "Memoria": "Asignar y liberar memoria simulada.",
         "Archivos": "Crear, leer, modificar y eliminar archivos.",
     }
@@ -40,18 +40,19 @@ class PyOS(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # Gestores compartidos por los modulos
+        # Gestores compartidos
         self.gestor_procesos = GestorProcesos()
         self.cola_mensajes = ColaMensajes()
         self.gestor_memoria = GestorMemoria(1024)
+        self.gestor_archivos = GestorArchivos()
 
-        # Ventana principal de PyOS
         self.setWindowTitle("PyOS Simulator")
         self.resize(1100, 700)
         self.setMinimumSize(850, 550)
 
         self.crear_escritorio()
         self.aplicar_estilos()
+
 
     def crear_escritorio(self):
 
@@ -62,6 +63,7 @@ class PyOS(QMainWindow):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        # Barra superior
         encabezado = QFrame()
         encabezado.setObjectName("encabezado")
 
@@ -75,12 +77,12 @@ class PyOS(QMainWindow):
 
         layout.addWidget(encabezado)
 
-
+        # Contenido principal
         contenido = QHBoxLayout()
         contenido.setContentsMargins(0, 0, 0, 0)
         contenido.setSpacing(0)
 
-
+        # Menu lateral
         lateral = QFrame()
         lateral.setObjectName("lateral")
         lateral.setFixedWidth(190)
@@ -89,11 +91,9 @@ class PyOS(QMainWindow):
 
         etiqueta = QLabel("APLICACIONES")
         etiqueta.setObjectName("seccion")
-
         menu_lateral.addWidget(etiqueta)
 
         for nombre in self.MODULOS:
-
             boton = QPushButton(nombre)
             boton.setObjectName("botonModulo")
 
@@ -105,10 +105,9 @@ class PyOS(QMainWindow):
             menu_lateral.addWidget(boton)
 
         menu_lateral.addStretch()
-
         contenido.addWidget(lateral)
 
-
+        # Escritorio con ventanas internas
         self.escritorio = QMdiArea()
 
         self.escritorio.setBackground(
@@ -116,22 +115,20 @@ class PyOS(QMainWindow):
         )
 
         contenido.addWidget(self.escritorio)
-
         layout.addLayout(contenido)
 
+        # Barra de tareas
         barra_tareas = QFrame()
         barra_tareas.setObjectName("barraTareas")
 
         tareas = QHBoxLayout(barra_tareas)
 
-        # Boton de inicio
         boton_inicio = QPushButton("Inicio")
         boton_inicio.setObjectName("inicio")
 
         menu_inicio = QMenu(self)
 
         for nombre in self.MODULOS:
-
             accion = menu_inicio.addAction(nombre)
 
             accion.triggered.connect(
@@ -144,12 +141,11 @@ class PyOS(QMainWindow):
         tareas.addWidget(boton_inicio)
         tareas.addStretch()
 
-
+        # Reloj
         self.reloj = QLabel()
         self.reloj.setObjectName("reloj")
 
         tareas.addWidget(self.reloj)
-
         layout.addWidget(barra_tareas)
 
         self.actualizar_reloj()
@@ -163,116 +159,78 @@ class PyOS(QMainWindow):
         self.temporizador.start(1000)
 
     def actualizar_reloj(self):
-
         hora = QDateTime.currentDateTime()
 
         self.reloj.setText(
             hora.toString("hh:mm:ss")
         )
 
-
     def abrir_modulo(self, nombre):
 
-        # Evitar abrir dos veces la misma ventana
+        # Evitar ventanas duplicadas
         for ventana in self.escritorio.subWindowList():
 
             if ventana.windowTitle() == nombre:
-
                 ventana.showNormal()
 
                 self.escritorio.setActiveSubWindow(
                     ventana
                 )
-
                 return
 
+        # Procesos
         if nombre == "Procesos":
-
             panel = ProcesosUI(
                 self.gestor_procesos
             )
 
-
-
+        # Planificador CPU
         elif nombre == "Planificador CPU":
-
             panel = PlanificadorUI(
                 self.gestor_procesos
             )
 
-
+        # Concurrencia
         elif nombre == "Concurrencia":
-
             panel = ConcurrenciaUI()
 
-
-
+        # Comunicacion
         elif nombre == "Comunicación":
-
             panel = ComunicacionUI(
                 self.cola_mensajes
             )
 
+        # Memoria
         elif nombre == "Memoria":
-
             panel = MemoriaUI(
                 self.gestor_memoria,
                 self.gestor_procesos
             )
 
-        else:
+        # Sistema de archivos - FASE 8
+        elif nombre == "Archivos":
+            panel = ArchivosUI(
+                self.gestor_archivos
+            )
 
+        # Modulo desconocido
+        else:
             panel = QWidget()
             panel.setObjectName("panel")
 
             panel_layout = QVBoxLayout(panel)
 
-            panel_layout.setContentsMargins(
-                25, 25, 25, 25
+            panel_layout.addWidget(
+                QLabel("Módulo no disponible.")
             )
 
-            titulo = QLabel(nombre)
-            titulo.setObjectName("tituloModulo")
-
-            descripcion = QLabel(
-                self.MODULOS[nombre]
-            )
-
-            descripcion.setWordWrap(True)
-
-            estado = QLabel(
-                "Módulo pendiente de implementación"
-            )
-
-            estado.setObjectName("estado")
-
-            panel_layout.addWidget(titulo)
-            panel_layout.addWidget(descripcion)
-            panel_layout.addSpacing(20)
-            panel_layout.addWidget(estado)
-            panel_layout.addStretch()
-
+        # Crear ventana interna
         ventana = self.escritorio.addSubWindow(
             panel
         )
 
         ventana.setWindowTitle(nombre)
-
-        # Tamaño de las ventanas
-        if nombre in (
-            "Procesos",
-            "Planificador CPU",
-            "Concurrencia",
-            "Comunicación",
-            "Memoria"
-        ):
-
-            ventana.resize(850, 560)
-
-        else:
-
-            ventana.resize(520, 320)
-
+        ventana.resize(850, 560)
         ventana.show()
 
         self.escritorio.setActiveSubWindow(
@@ -359,7 +317,6 @@ class PyOS(QMainWindow):
         """)
 
 if __name__ == "__main__":
-
     app = QApplication(sys.argv)
 
     ventana = PyOS()
