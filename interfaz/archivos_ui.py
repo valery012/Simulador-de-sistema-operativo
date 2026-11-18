@@ -5,7 +5,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QGridLayout
 )
 
-
 class ArchivosUI(QWidget):
 
     def __init__(self, gestor_archivos):
